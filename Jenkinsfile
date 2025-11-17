@@ -1,48 +1,35 @@
 pipeline {
     agent any
-
-    environment {
-        // Java and Gradle versions can be set in Jenkins globally or here
-        JAVA_HOME = tool name: 'JDK 17', type: 'jdk'
-        PATH = "${JAVA_HOME}/bin:${env.PATH}"
+    tools {
+        jdk 'JDK11'
+        gradle 'Gradle6'  // Make sure you configure Gradle in Jenkins
     }
-
     stages {
         stage('Checkout') {
             steps {
-                // Pull code from GitHub
-                git branch: 'main', url: 'https://github.com/cusirramosa1-art/springboot-jenkins-lab.git'
+                git 'https://github.com/cusirramosa1-art/cusirramosa1-art.git'
             }
         }
-
         stage('Build') {
             steps {
-                // Build fat jar using Gradle
                 sh './gradlew clean build'
             }
         }
-
-        stage('Test') {
+        stage('Publish to Nexus') {
             steps {
-                // Run unit tests
-                sh './gradlew test'
+                nexusArtifactUploader(
+                    nexusVersion: 'nexus3',
+                    protocol: 'http',
+                    nexusUrl: 'localhost:8081',
+                    groupId: 'com.example.demo',          // Replace with your group
+                    version: '0.0.1-SNAPSHOT',           // Replace with your version
+                    repository: 'maven-releases',        // Your Nexus repo
+                    credentialsId: 'nexus-credentials',  // Jenkins Nexus credentials
+                    artifacts: [
+                        [artifactId: 'cusirramosa1-art', classifier: '', file: 'build/libs/*.jar', type: 'jar']
+                    ]
+                )
             }
-        }
-
-        stage('Archive Artifact') {
-            steps {
-                // Archive the built jar
-                archiveArtifacts artifacts: 'build/libs/*.jar', fingerprint: true
-            }
-        }
-    }
-
-    post {
-        success {
-            echo "Build succeeded!"
-        }
-        failure {
-            echo "Build failed!"
         }
     }
 }
